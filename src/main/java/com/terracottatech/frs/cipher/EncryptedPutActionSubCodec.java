@@ -16,10 +16,9 @@
 package com.terracottatech.frs.cipher;
 
 import com.terracottatech.frs.PutAction;
-import com.terracottatech.frs.PutActionHandler;
 import com.terracottatech.frs.action.Action;
 import com.terracottatech.frs.action.ActionCodec;
-import com.terracottatech.frs.action.ActionHandler;
+import com.terracottatech.frs.action.ActionSubCodec;
 import com.terracottatech.frs.object.ObjectManager;
 import com.terracottatech.frs.util.ByteBufferUtils;
 
@@ -27,13 +26,14 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class EncryptedPutActionHandler implements ActionHandler<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> {
+public class EncryptedPutActionSubCodec implements ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> {
   private final CipherManager cipherManager;
-  private final PutActionHandler handler;
+  private final ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> delegate;
 
-  public EncryptedPutActionHandler(CipherManager cipherManager, PutActionHandler handler) {
+  public EncryptedPutActionSubCodec(CipherManager cipherManager,
+                                    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> delegate) {
     this.cipherManager = cipherManager;
-    this.handler = handler;
+    this.delegate = delegate;
   }
 
   @Override
@@ -99,7 +99,7 @@ public class EncryptedPutActionHandler implements ActionHandler<ByteBuffer, Byte
       String token = StandardCharsets.UTF_8.decode(tokenBuffer).toString();
       return new LazyDecryptingGettableAction(objectManager, cipherManager, invalidatedLsn, identifier, token, buffers);
     } else {
-      return handler.decode(objectManager, codec, buffers);
+      return delegate.decode(objectManager, codec, buffers);
     }
   }
 

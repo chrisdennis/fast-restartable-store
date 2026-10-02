@@ -35,7 +35,7 @@ public class ActionManagerImpl implements ActionManager {
 
   private final LogManager             logManager;
   private final ObjectManager<?, ?, ?> objectManager;
-  private final ActionCodec            actionCodec;
+  private final EncryptionManager<?,?,?> encryptionManager;
   private final LogRecordFactory       logRecordFactory;
 
   private final AtomicInteger          happeningCount;
@@ -45,10 +45,10 @@ public class ActionManagerImpl implements ActionManager {
   private volatile int pauseRequestCount = 0;
 
   public ActionManagerImpl(LogManager logManager, ObjectManager<?, ?, ?> objectManager,
-                           ActionCodec actionCodec, LogRecordFactory logRecordFactory) {
+                           EncryptionManager<?,?,?> encryptionManager, LogRecordFactory logRecordFactory) {
     this.logManager = logManager;
     this.objectManager = objectManager;
-    this.actionCodec = actionCodec;
+    this.encryptionManager = encryptionManager;
     this.logRecordFactory = logRecordFactory;
     this.happeningCount = new AtomicInteger(0);
     this.stateLock = new ReentrantLock();
@@ -57,7 +57,7 @@ public class ActionManagerImpl implements ActionManager {
   }
 
   private LogRecord wrapAction(Action action) {
-    ByteBuffer[] payload = actionCodec.encode(action);
+    ByteBuffer[] payload = encryptionManager.encode(action);
     return logRecordFactory.createLogRecord(payload, action);
   }
 
@@ -86,7 +86,7 @@ public class ActionManagerImpl implements ActionManager {
 
   @Override
   public Action extract(LogRecord record) {
-    Action a = actionCodec.decode(record.getPayload());
+    Action a = encryptionManager.decode(record.getPayload());
     if ( a instanceof DisposableLifecycle ) {
         ((DisposableLifecycle)a).setDisposable(record);
     }

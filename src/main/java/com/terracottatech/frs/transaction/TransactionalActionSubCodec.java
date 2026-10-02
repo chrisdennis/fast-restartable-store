@@ -17,7 +17,7 @@ package com.terracottatech.frs.transaction;
 
 import com.terracottatech.frs.action.Action;
 import com.terracottatech.frs.action.ActionCodec;
-import com.terracottatech.frs.action.ActionHandler;
+import com.terracottatech.frs.action.ActionSubCodec;
 import com.terracottatech.frs.object.ObjectManager;
 
 import java.nio.ByteBuffer;
@@ -27,7 +27,7 @@ import static com.terracottatech.frs.transaction.TransactionalAction.COMMIT_BIT;
 import static com.terracottatech.frs.util.ByteBufferUtils.concatenate;
 import static com.terracottatech.frs.util.ByteBufferUtils.get;
 
-public class TransactionalActionHandler implements ActionHandler<ByteBuffer, ByteBuffer, ByteBuffer, TransactionalAction> {
+public class TransactionalActionSubCodec implements ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, TransactionalAction> {
   @Override
   public ByteBuffer[] encode(TransactionalAction action, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec) {
     

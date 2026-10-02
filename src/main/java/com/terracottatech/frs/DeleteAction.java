@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 /**
  * @author tim
  */
-class DeleteAction implements Action, DisposableLifecycle {
+public class DeleteAction implements Action, DisposableLifecycle {
 
   private final ObjectManager<ByteBuffer, ?, ?> objectManager;
   private final Compactor compactor;

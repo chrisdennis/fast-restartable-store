@@ -13,36 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.terracottatech.frs.transaction;
+package com.terracottatech.frs;
 
 import com.terracottatech.frs.action.Action;
 import com.terracottatech.frs.action.ActionCodec;
-import com.terracottatech.frs.action.ActionHandler;
+import com.terracottatech.frs.action.ActionSubCodec;
+import com.terracottatech.frs.action.SimpleInvalidatingAction;
 import com.terracottatech.frs.object.ObjectManager;
 import com.terracottatech.frs.util.ByteBufferUtils;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 
-public class TransactionCommitActionHandler implements ActionHandler<ByteBuffer, ByteBuffer, ByteBuffer, TransactionCommitAction> {
+public class RemoveActionSubCodec implements ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, RemoveAction> {
   @Override
-  public ByteBuffer[] encode(TransactionCommitAction action, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec) {
-    TransactionHandle handle = action.getHandle();
-    ByteBuffer handleBuffer = handle.toByteBuffer();
-    ByteBuffer header = ByteBuffer.allocate(1);
-    if (action.isBegin()) {
-      header.put((byte) 1);
-    } else {
-      header.put((byte) 0);
-    }
-    header.flip();
-    return new ByteBuffer[]{handleBuffer, header};
+  public ByteBuffer[] encode(RemoveAction action, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec) {
+    long invalidatedLsn = action.getInvalidatedLsns().stream().reduce(
+        (a, b) -> {
+          throw new IllegalStateException("More than one element is present");
+        }).orElse(-1L);
+    ByteBuffer header = ByteBuffer.allocate(ByteBufferUtils.LONG_SIZE);
+    header.putLong(invalidatedLsn).flip();
+    return new ByteBuffer[] { header };
   }
 
   @Override
   public Action decode(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager, 
                        ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec, ByteBuffer[] buffers) {
-    TransactionHandle handle = TransactionHandleImpl.withByteBuffers(buffers);
-    boolean emptyTransaction = ByteBufferUtils.get(buffers) == 1;
-    return new TransactionCommitAction(handle, emptyTransaction);
+    long invalidatedLsn = ByteBufferUtils.getLong(buffers);
+    return new SimpleInvalidatingAction(Collections.singleton(invalidatedLsn));
   }
 }

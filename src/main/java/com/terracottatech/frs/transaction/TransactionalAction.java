@@ -31,7 +31,7 @@ import java.io.IOException;
 /**
  * @author tim
  */
-class TransactionalAction implements TransactionAction, GettableAction {
+public class TransactionalAction implements TransactionAction, GettableAction {
   
   static final byte COMMIT_BIT = 0x01;
   static final byte BEGIN_BIT = 0x02;

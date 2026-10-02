@@ -18,7 +18,7 @@ package com.terracottatech.frs.transaction;
 /**
  * @author tim
  */
-class TransactionCommitAction implements TransactionAction {
+public class TransactionCommitAction implements TransactionAction {
 
   private final TransactionHandle handle;
   private final boolean emptyTransaction;

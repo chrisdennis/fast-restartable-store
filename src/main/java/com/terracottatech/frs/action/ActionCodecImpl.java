@@ -28,7 +28,7 @@ import static com.terracottatech.frs.util.ByteBufferUtils.getInt;
 /**
  * @author tim
  */
-public final class ActionCodecImpl<I, K, V> implements ActionCodec<I, K, V> {
+public final class ActionCodecImpl implements ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> {
   /* ActionCodecImpl.encode
   4 bytes - ActionID.collection
   4 bytes - ActionID.action
@@ -39,64 +39,95 @@ public final class ActionCodecImpl<I, K, V> implements ActionCodec<I, K, V> {
 
   private final Map<Class<? extends Action>, ActionID> classToId =
           new ConcurrentHashMap<>();
-  private final Map<ActionID, ActionHandler<I, K, V, ? extends Action>> idToHandler =
+  private final Map<ActionID, ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action>> idToSubCodec =
           new ConcurrentHashMap<>();
-  private final ObjectManager<I, K, V> objectManager;
+  private final Map<ActionID, Class<? extends Action>> idToClass = new ConcurrentHashMap<>();
+  private final ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager;
 
-  public ActionCodecImpl(ObjectManager<I, K, V> objectManager) {
+  public ActionCodecImpl(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager) {
     this.objectManager = objectManager;
-    registerAction(NULL_ACTION_ID, NullAction.class, NullAction.handler());
+    registerAction(NULL_ACTION_ID, NullAction.class, NullAction.subCodec());
   }
 
-  private synchronized <T extends Action> void registerAction(ActionID id, Class<? extends Action> actionClass, 
-                                                              ActionHandler<I, K, V, T> actionHandler) {
+  private synchronized <T extends Action> void registerAction(ActionID id, Class<T> actionClass, 
+                                                              ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> actionSubCodec) {
     if (classToId.containsKey(actionClass)) {
       throw new IllegalArgumentException(
           "Action class " + actionClass + " already registered to id " + classToId.get(
               actionClass));
     }
-    if (idToHandler.containsKey(id)) {
+    if (idToSubCodec.containsKey(id)) {
       throw new IllegalArgumentException(
-          "Id " + id + " already registered to action class " + idToHandler.get(id));
+          "Id " + id + " already registered to action SubCodec " + idToSubCodec.get(id));
+    }
+    if (idToClass.containsKey(id)) {
+      throw new IllegalArgumentException(
+          "Id " + id + " already registered to action class " + idToClass.get(id));
     }
     classToId.put(actionClass, id);
-    idToHandler.put(id, actionHandler);
+    idToClass.put(id, actionClass);
+    @SuppressWarnings("unchecked")
+    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action> genericSubCodec = 
+        (ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action>) actionSubCodec;
+    idToSubCodec.put(id, genericSubCodec);
   }
 
   @Override
   public synchronized <T extends Action> void registerAction(int collectionId, int actionId, 
-                                                             Class<? extends Action> actionClass, 
-                                                             ActionHandler<I, K, V, T> actionHandler) {
-    registerAction(new ActionID(collectionId, actionId), actionClass, actionHandler);
+                                                             Class<T> actionClass, 
+                                                             ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> actionSubCodec) {
+    registerAction(new ActionID(collectionId, actionId), actionClass, actionSubCodec);
   }
 
   @Override
-  public synchronized <T extends Action> void updateHandler(Class<? extends Action> actionClass, 
-                                                            ActionHandler<I, K, V, T> actionHandler) {
-    if(!classToId.containsKey(actionClass)) {
-      throw new IllegalArgumentException("No handler found for: " + actionClass);
+  @SuppressWarnings("unchecked")
+  public <T extends Action> ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> getSubCodec(Class<? extends Action> actionClass) {
+    if (!classToId.containsKey(actionClass)) {
+      throw new IllegalArgumentException("No SubCodec found for: " + actionClass);
     }
-    idToHandler.put(classToId.get(actionClass), actionHandler);
+    return (ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T>) idToSubCodec.get(classToId.get(actionClass));
+  }
+
+  @Override
+  public Class<? extends Action> getActionClass(ByteBuffer[] buffers) {
+    ActionID id = ActionID.withByteBuffers(buffers);
+    Class<? extends Action> actionClass = idToClass.get(id);
+    if (actionClass == null) {
+      throw new IllegalArgumentException("Unknown Action type id= " + id);
+    }
+    return actionClass;
   }
 
   @Override
   public Action decode(ByteBuffer[] buffers) {
     ActionID id = ActionID.withByteBuffers(buffers);
-    ActionHandler<I, K, V, ? extends Action> handler = idToHandler.get(id);
-    if (handler == null)
+    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action> subCodec = idToSubCodec.get(id);
+    if (subCodec == null) {
       throw new IllegalArgumentException("Unknown Action type id= " + id);
-    return handler.decode(objectManager, this, buffers);
+    }
+    return subCodec.decode(objectManager, this, buffers);
   }
 
   @Override
   public ByteBuffer[] encode(Action action) {
+    System.out.println("Hello " + action.getClass());
     if (!classToId.containsKey(action.getClass()))
       throw new IllegalArgumentException("Unknown action class " + action.getClass());
-    ActionHandler<I, K, V, Action> handler = (ActionHandler<I, K, V, Action>)idToHandler.get(classToId.get(action.getClass()));
-    if (handler == null) {
-      throw new IllegalStateException("No handler found for " + action.getClass());
+    
+    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action> subCodec = 
+        idToSubCodec.get(classToId.get(action.getClass()));
+    if (subCodec == null) {
+      throw new IllegalStateException("No SubCodec found for " + action.getClass());
     }
-    return concatenate(headerBuffer(action), handler.encode(action, this));
+    @SuppressWarnings("unchecked")
+    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, Action> boundSubCodec = 
+        (ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, Action>) subCodec;
+    return concatenate(headerBuffer(action), boundSubCodec.encode(action, this));
+  }
+
+  @Override
+  public ByteBuffer getHeader(Action action) {
+    return headerBuffer(action);
   }
 
   private ByteBuffer headerBuffer(Action action) {

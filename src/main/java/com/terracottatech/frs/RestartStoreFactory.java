@@ -56,7 +56,7 @@ public abstract class RestartStoreFactory {
 
   private static ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> createCodec(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager) {
     ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec =
-            new ActionCodecImpl<ByteBuffer, ByteBuffer, ByteBuffer>(objectManager);
+            new ActionCodecImpl(objectManager);
     MapActions.registerActions(0, codec);
     TransactionActions.registerActions(1, codec);
     CompactionActions.registerActions(2, codec);
@@ -83,8 +83,8 @@ public abstract class RestartStoreFactory {
     ReadManager readManager = new ReadManagerImpl(ioManager, configuration.getString(FrsProperty.FORCE_LOG_REGION_FORMAT));
     LogManager logManager = new StagingLogManager(ioManager,writingSource,configuration);
     ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec = createCodec(objectManager);
-    EncryptionManager encryptionManager = new EncryptionManagerImpl(configuration, codec);
-    ActionManager actionManager = new ActionManagerImpl(logManager, objectManager, codec,
+    EncryptionManager<ByteBuffer, ByteBuffer, ByteBuffer> encryptionManager = new EncryptionManagerImpl(configuration, objectManager, codec);
+    ActionManager actionManager = new ActionManagerImpl(logManager, objectManager, encryptionManager,
         new MasterLogRecordFactory());
     TransactionManager transactionManager = new TransactionManagerImpl(actionManager);
     return new RestartStoreImpl(objectManager, transactionManager, logManager,

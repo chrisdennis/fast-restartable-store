@@ -17,30 +17,21 @@ package com.terracottatech.frs;
 
 import com.terracottatech.frs.action.Action;
 import com.terracottatech.frs.action.ActionCodec;
-import com.terracottatech.frs.action.ActionHandler;
-import com.terracottatech.frs.action.SimpleInvalidatingAction;
+import com.terracottatech.frs.action.ActionSubCodec;
 import com.terracottatech.frs.object.ObjectManager;
 import com.terracottatech.frs.util.ByteBufferUtils;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 
-public class RemoveActionHandler implements ActionHandler<ByteBuffer, ByteBuffer, ByteBuffer, RemoveAction> {
+public class DeleteActionSubCodec implements ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, DeleteAction> {
   @Override
-  public ByteBuffer[] encode(RemoveAction action, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec) {
-    long invalidatedLsn = action.getInvalidatedLsns().stream().reduce(
-        (a, b) -> {
-          throw new IllegalStateException("More than one element is present");
-        }).orElse(-1L);
-    ByteBuffer header = ByteBuffer.allocate(ByteBufferUtils.LONG_SIZE);
-    header.putLong(invalidatedLsn).flip();
-    return new ByteBuffer[] { header };
+  public ByteBuffer[] encode(DeleteAction action, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec) {
+    return new ByteBuffer[] { action.getId().slice() };
   }
 
   @Override
   public Action decode(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager, 
                        ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec, ByteBuffer[] buffers) {
-    long invalidatedLsn = ByteBufferUtils.getLong(buffers);
-    return new SimpleInvalidatingAction(Collections.singleton(invalidatedLsn));
+    return new DeleteAction(objectManager, null, ByteBufferUtils.getFirstNonEmpty(buffers), false);
   }
 }

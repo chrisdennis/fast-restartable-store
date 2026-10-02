@@ -15,10 +15,21 @@
  */
 package com.terracottatech.frs.cipher;
 
+import com.terracottatech.frs.action.Action;
+import com.terracottatech.frs.action.ActionCodec;
+import com.terracottatech.frs.action.ActionSubCodec;
+
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
-public class NoEncryptionHandler implements EncryptionHandler {
+public class NoEncryptionHandler implements EncryptionHandler<ByteBuffer, ByteBuffer, ByteBuffer> {
+
+  private final ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> actionCodec;
+
+  public NoEncryptionHandler(ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> actionCodec) {
+    this.actionCodec = actionCodec;
+  }
 
   @Override
   public String getCurrToken() {
@@ -43,5 +54,38 @@ public class NoEncryptionHandler implements EncryptionHandler {
   @Override
   public void remove(List<String> tokens) {
     throw new UnsupportedOperationException("operation unsupported");
+  }
+
+  @Override
+  public <T extends Action> void registerAction(int collectionId, int actionId, Class<T> actionClass,
+                                                ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> actionSubCodec) {
+    actionCodec.registerAction(collectionId, actionId, actionClass, actionSubCodec);
+  }
+
+  
+  @Override
+  public <T extends Action> ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> getSubCodec(
+      Class<? extends Action> actionClass) {
+    return actionCodec.getSubCodec(actionClass);
+  }
+
+  @Override
+  public Class<? extends Action> getActionClass(ByteBuffer[] buffers) {
+    return actionCodec.getActionClass(buffers);
+  }
+
+  @Override
+  public Action decode(ByteBuffer[] buffer) {
+    return actionCodec.decode(buffer);
+  }
+
+  @Override
+  public ByteBuffer[] encode(Action action) {
+    return actionCodec.encode(action);
+  }
+
+  @Override
+  public ByteBuffer getHeader(Action action) {
+    return actionCodec.getHeader(action);
   }
 }

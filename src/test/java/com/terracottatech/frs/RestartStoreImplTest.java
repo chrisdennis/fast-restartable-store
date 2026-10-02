@@ -67,7 +67,7 @@ public class RestartStoreImplTest {
   private RestartStore<ByteBuffer, ByteBuffer, ByteBuffer>  restartStore;
   private ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager;
   private ActionManager                                     actionManager;
-  private EncryptionManager                                 encryptionManager;
+  private EncryptionManager<ByteBuffer, ByteBuffer, ByteBuffer> encryptionManager;
   private ReadManager                                     readManager;
   private Compactor                                         compactor;
   private TransactionManager                                transactionManager;

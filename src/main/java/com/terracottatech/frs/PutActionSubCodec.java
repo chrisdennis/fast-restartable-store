@@ -17,7 +17,7 @@ package com.terracottatech.frs;
 
 import com.terracottatech.frs.action.Action;
 import com.terracottatech.frs.action.ActionCodec;
-import com.terracottatech.frs.action.ActionHandler;
+import com.terracottatech.frs.action.ActionSubCodec;
 import com.terracottatech.frs.object.ObjectManager;
 import com.terracottatech.frs.util.ByteBufferUtils;
 
@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 import static com.terracottatech.frs.PutAction.HEADER_SIZE;
 
-public class PutActionHandler implements ActionHandler<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> {
+public class PutActionSubCodec implements ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> {
   /* PutAction.getPayload
   4 bytes - PutAction.idByteCount
   4 bytes - PutAction.keyByteCount

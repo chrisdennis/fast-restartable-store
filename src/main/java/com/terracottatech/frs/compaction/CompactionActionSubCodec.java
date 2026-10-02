@@ -13,25 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.terracottatech.frs;
+package com.terracottatech.frs.compaction;
 
+import com.terracottatech.frs.PutActionSubCodec;
 import com.terracottatech.frs.action.Action;
 import com.terracottatech.frs.action.ActionCodec;
-import com.terracottatech.frs.action.ActionHandler;
+import com.terracottatech.frs.action.ActionSubCodec;
 import com.terracottatech.frs.object.ObjectManager;
-import com.terracottatech.frs.util.ByteBufferUtils;
 
 import java.nio.ByteBuffer;
 
-public class DeleteActionHandler implements ActionHandler<ByteBuffer, ByteBuffer, ByteBuffer, DeleteAction> {
+public class CompactionActionSubCodec implements ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, CompactionAction> {
+  private final PutActionSubCodec delegate;
+  
+  public CompactionActionSubCodec(PutActionSubCodec delegate) {
+    this.delegate = delegate;  
+  } 
+  
   @Override
-  public ByteBuffer[] encode(DeleteAction action, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec) {
-    return new ByteBuffer[] { action.getId().slice() };
+  public ByteBuffer[] encode(CompactionAction action, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec) {
+    return delegate.encode(action, codec);
   }
 
   @Override
-  public Action decode(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager, 
-                       ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec, ByteBuffer[] buffers) {
-    return new DeleteAction(objectManager, null, ByteBufferUtils.getFirstNonEmpty(buffers), false);
+  public Action decode(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec, ByteBuffer[] buffers) {
+    return delegate.decode(objectManager, codec, buffers);
   }
 }

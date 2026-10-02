@@ -26,7 +26,7 @@ import java.util.Set;
 /**
  * @author tim
  */
-class RemoveAction implements InvalidatingAction {
+public class RemoveAction implements InvalidatingAction {
 
   private final ObjectManager<ByteBuffer, ByteBuffer, ?> objectManager;
   private final Compactor compactor;
@@ -35,7 +35,7 @@ class RemoveAction implements InvalidatingAction {
   private final long invalidatedLsn;
   
 
-  RemoveAction(ObjectManager<ByteBuffer, ByteBuffer, ?> objectManager, Compactor compactor, ByteBuffer id, ByteBuffer key, boolean recovery) {
+  public RemoveAction(ObjectManager<ByteBuffer, ByteBuffer, ?> objectManager, Compactor compactor, ByteBuffer id, ByteBuffer key, boolean recovery) {
     this.objectManager = objectManager;
     this.compactor = compactor;
     this.id = id;

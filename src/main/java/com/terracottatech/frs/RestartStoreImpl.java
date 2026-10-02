@@ -79,7 +79,7 @@ public class RestartStoreImpl implements RestartStore<ByteBuffer, ByteBuffer, By
   private final Compactor compactor;
   private final LogManager logManager;
   private final ActionManager actionManager;
-  private final EncryptionManager encryptionManager;
+  private final EncryptionManager<ByteBuffer, ByteBuffer, ByteBuffer> encryptionManager;
   private final ReadManager readManager;
   private final Configuration configuration;
 
@@ -98,7 +98,8 @@ public class RestartStoreImpl implements RestartStore<ByteBuffer, ByteBuffer, By
   // For testing purpose
   RestartStoreImpl(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager,
                    TransactionManager transactionManager, LogManager logManager,
-                   ActionManager actionManager, EncryptionManager encryptionManager, ReadManager read, Compactor compactor,
+                   ActionManager actionManager, EncryptionManager<ByteBuffer, ByteBuffer, ByteBuffer> encryptionManager,
+                   ReadManager read, Compactor compactor,
                    Configuration configuration) {
     this.transactionManager = transactionManager;
     this.objectManager = objectManager;
@@ -115,8 +116,8 @@ public class RestartStoreImpl implements RestartStore<ByteBuffer, ByteBuffer, By
 
   public RestartStoreImpl(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager,
                           TransactionManager transactionManager, LogManager logManager, ActionManager actionManager,
-                          EncryptionManager encryptionManager, ReadManager read, IOManager ioManager,
-                          Configuration configuration) throws RestartStoreException {
+                          EncryptionManager<ByteBuffer, ByteBuffer, ByteBuffer> encryptionManager, ReadManager read, 
+                          IOManager ioManager, Configuration configuration) throws RestartStoreException {
     this(objectManager, transactionManager, logManager, actionManager, encryptionManager, read,
         new CompactorImpl(objectManager, transactionManager, logManager, ioManager, configuration, actionManager),
         configuration);

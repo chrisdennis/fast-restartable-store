@@ -27,16 +27,16 @@ public class NullAction implements Action {
   
   private long lsn;
 
-  public static <I, K, V> ActionHandler<I, K, V, Action> handler() {
-    return new ActionHandler<I, K, V, Action>() {
+  public static ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, NullAction> subCodec() {
+    return new ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, NullAction>() {
 
       @Override
-      public ByteBuffer[] encode(Action action, ActionCodec<I, K, V> codec) {
+      public ByteBuffer[] encode(NullAction action, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec) {
         return new ByteBuffer[0];
       }
 
       @Override
-      public Action decode(ObjectManager<I, K, V> objectManager, ActionCodec<I, K, V> codec, ByteBuffer[] buffers) {
+      public Action decode(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec, ByteBuffer[] buffers) {
         return INSTANCE;
       }
     };

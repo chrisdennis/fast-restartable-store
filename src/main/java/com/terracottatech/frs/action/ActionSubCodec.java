@@ -19,9 +19,10 @@ import com.terracottatech.frs.object.ObjectManager;
 
 import java.nio.ByteBuffer;
 
-public interface ActionHandler<I,K,V,T> {
-  
-  ByteBuffer[] encode(T action, ActionCodec<I,K,V> codec);
-  Action decode(ObjectManager<I,K,V> objectManager, ActionCodec<I,K,V> codec, ByteBuffer[] buffers);
-  
+public interface ActionSubCodec<I, K, V, T> {
+
+  ByteBuffer[] encode(T action, ActionCodec<I, K, V> codec);
+
+  Action decode(ObjectManager<I, K, V> objectManager, ActionCodec<I, K, V> codec, ByteBuffer[] buffers);
+
 }

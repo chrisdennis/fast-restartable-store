@@ -15,9 +15,11 @@
  */
 package com.terracottatech.frs.cipher;
 
+import com.terracottatech.frs.action.ActionCodec;
+
 import java.util.List;
 
-public interface EncryptionHandler {
+public interface EncryptionHandler<I, K, V> extends ActionCodec<I, K, V> {
 
   String getCurrToken();
 
