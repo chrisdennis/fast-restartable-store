@@ -39,7 +39,7 @@ public final class ActionCodecImpl implements ActionCodec<ByteBuffer, ByteBuffer
 
   private final Map<Class<? extends Action>, ActionID> classToId =
           new ConcurrentHashMap<>();
-  private final Map<ActionID, ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action>> idToSubCodec =
+  private final Map<ActionID, ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ?>> idToSubCodec =
           new ConcurrentHashMap<>();
   private final Map<ActionID, Class<? extends Action>> idToClass = new ConcurrentHashMap<>();
   private final ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager;
@@ -50,7 +50,7 @@ public final class ActionCodecImpl implements ActionCodec<ByteBuffer, ByteBuffer
   }
 
   private synchronized <T extends Action> void registerAction(ActionID id, Class<T> actionClass, 
-                                                              ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> actionSubCodec) {
+                                                              ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? super T> actionSubCodec) {
     if (classToId.containsKey(actionClass)) {
       throw new IllegalArgumentException(
           "Action class " + actionClass + " already registered to id " + classToId.get(
@@ -66,42 +66,20 @@ public final class ActionCodecImpl implements ActionCodec<ByteBuffer, ByteBuffer
     }
     classToId.put(actionClass, id);
     idToClass.put(id, actionClass);
-    @SuppressWarnings("unchecked")
-    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action> genericSubCodec = 
-        (ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action>) actionSubCodec;
-    idToSubCodec.put(id, genericSubCodec);
+    idToSubCodec.put(id, actionSubCodec);
   }
 
   @Override
   public synchronized <T extends Action> void registerAction(int collectionId, int actionId, 
                                                              Class<T> actionClass, 
-                                                             ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> actionSubCodec) {
+                                                             ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? super T> actionSubCodec) {
     registerAction(new ActionID(collectionId, actionId), actionClass, actionSubCodec);
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public <T extends Action> ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> getSubCodec(Class<? extends Action> actionClass) {
-    if (!classToId.containsKey(actionClass)) {
-      throw new IllegalArgumentException("No SubCodec found for: " + actionClass);
-    }
-    return (ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T>) idToSubCodec.get(classToId.get(actionClass));
-  }
-
-  @Override
-  public Class<? extends Action> getActionClass(ByteBuffer[] buffers) {
-    ActionID id = ActionID.withByteBuffers(buffers);
-    Class<? extends Action> actionClass = idToClass.get(id);
-    if (actionClass == null) {
-      throw new IllegalArgumentException("Unknown Action type id= " + id);
-    }
-    return actionClass;
   }
 
   @Override
   public Action decode(ByteBuffer[] buffers) {
     ActionID id = ActionID.withByteBuffers(buffers);
-    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action> subCodec = idToSubCodec.get(id);
+    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ?> subCodec = idToSubCodec.get(id);
     if (subCodec == null) {
       throw new IllegalArgumentException("Unknown Action type id= " + id);
     }
@@ -110,11 +88,10 @@ public final class ActionCodecImpl implements ActionCodec<ByteBuffer, ByteBuffer
 
   @Override
   public ByteBuffer[] encode(Action action) {
-    System.out.println("Hello " + action.getClass());
     if (!classToId.containsKey(action.getClass()))
       throw new IllegalArgumentException("Unknown action class " + action.getClass());
     
-    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? extends Action> subCodec = 
+    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ?> subCodec =
         idToSubCodec.get(classToId.get(action.getClass()));
     if (subCodec == null) {
       throw new IllegalStateException("No SubCodec found for " + action.getClass());
@@ -123,11 +100,6 @@ public final class ActionCodecImpl implements ActionCodec<ByteBuffer, ByteBuffer
     ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, Action> boundSubCodec = 
         (ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, Action>) subCodec;
     return concatenate(headerBuffer(action), boundSubCodec.encode(action, this));
-  }
-
-  @Override
-  public ByteBuffer getHeader(Action action) {
-    return headerBuffer(action);
   }
 
   private ByteBuffer headerBuffer(Action action) {

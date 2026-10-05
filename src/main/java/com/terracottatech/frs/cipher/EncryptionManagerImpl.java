@@ -20,12 +20,11 @@ import com.terracottatech.frs.action.ActionCodec;
 import com.terracottatech.frs.action.ActionSubCodec;
 import com.terracottatech.frs.config.Configuration;
 import com.terracottatech.frs.config.FrsProperty;
-import com.terracottatech.frs.object.ObjectManager;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class EncryptionManagerImpl implements EncryptionManager<ByteBuffer, ByteBuffer, ByteBuffer> {
@@ -33,16 +32,11 @@ public class EncryptionManagerImpl implements EncryptionManager<ByteBuffer, Byte
   public static final String TOKEN_KEY_DELIMITER = ":";
   public static final String MULTIPLE_TOKEN_KEY_DELIMITER = ",";
 
-  private final ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager;
-  private final ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> actionCodec;
-
-  private volatile EncryptionHandler<ByteBuffer, ByteBuffer, ByteBuffer> cipherKeyHandler;
+  private final EncryptedActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> cipherKeyHandler;
   private volatile boolean encryptEnabled = false;
 
   public EncryptionManagerImpl(Configuration configuration,
-                               ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager, ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> actionCodec) {
-    this.objectManager = objectManager;
-    this.actionCodec = actionCodec;
+                               ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> actionCodec) {
     boolean encrypted = configuration.getBoolean(FrsProperty.STORE_ENCRYPTION_ENABLE);
     if (encrypted) {
       String oldTokenAndKeys = configuration.getString(FrsProperty.STORE_ENCRYPTION_OLD_TOKENS_AND_KEYS);
@@ -64,7 +58,7 @@ public class EncryptionManagerImpl implements EncryptionManager<ByteBuffer, Byte
       byte[] newKey = Base64.getDecoder().decode(newTokenSplit[1]);
       tokenToKeyMap.put(newToken, newKey);
 
-      cipherKeyHandler = new DefaultEncryptionHandler(objectManager, actionCodec, tokenToKeyMap, newToken);
+      cipherKeyHandler = new EncryptedActionCodecImpl(actionCodec, tokenToKeyMap, newToken);
       encryptEnabled = true;
     } else {
       cipherKeyHandler = new NoEncryptionHandler(actionCodec);
@@ -77,7 +71,7 @@ public class EncryptionManagerImpl implements EncryptionManager<ByteBuffer, Byte
   }
 
   @Override
-  public List<String> getPreviousTokens() {
+  public Collection<String> getPreviousTokens() {
     return cipherKeyHandler.getPreviousTokens();
   }
 
@@ -91,33 +85,20 @@ public class EncryptionManagerImpl implements EncryptionManager<ByteBuffer, Byte
     if (encryptEnabled) {
       cipherKeyHandler.add(token, key);
     } else {
-      Map<String, byte[]> tokenToKeyMap = new HashMap<>();
-      tokenToKeyMap.put(token, key);
-      cipherKeyHandler = new DefaultEncryptionHandler(objectManager, actionCodec, tokenToKeyMap, token);
+      throw new UnsupportedOperationException();
     }
   }
 
   @Override
-  public void remove(List<String> tokens) {
+  public void remove(Collection<String> tokens) {
     cipherKeyHandler.remove(tokens);
   }
 
 
   @Override
   public <T extends Action> void registerAction(int collectionId, int actionId, Class<T> actionClass,
-                                                ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> actionSubCodec) {
+                                                ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? super T> actionSubCodec) {
     cipherKeyHandler.registerAction(collectionId, actionId, actionClass, actionSubCodec);
-  }
-
-  @Override
-  public <T extends Action> ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, T> getSubCodec(
-      Class<? extends Action> actionClass) {
-    return cipherKeyHandler.getSubCodec(actionClass);
-  }
-
-  @Override
-  public Class<? extends Action> getActionClass(ByteBuffer[] buffers) {
-    return cipherKeyHandler.getActionClass(buffers);
   }
 
   @Override
@@ -128,10 +109,5 @@ public class EncryptionManagerImpl implements EncryptionManager<ByteBuffer, Byte
   @Override
   public ByteBuffer[] encode(Action action) {
     return cipherKeyHandler.encode(action);
-  }
-
-  @Override
-  public ByteBuffer getHeader(Action action) {
-    return cipherKeyHandler.getHeader(action);
   }
 }

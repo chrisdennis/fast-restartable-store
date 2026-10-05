@@ -26,12 +26,12 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class EncryptedPutActionSubCodec implements ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> {
+public class EncryptedPutActionCodec implements ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> {
   private final CipherManager cipherManager;
   private final ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> delegate;
 
-  public EncryptedPutActionSubCodec(CipherManager cipherManager,
-                                    ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> delegate) {
+  public EncryptedPutActionCodec(CipherManager cipherManager,
+                                 ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, PutAction> delegate) {
     this.cipherManager = cipherManager;
     this.delegate = delegate;
   }
@@ -49,7 +49,7 @@ public class EncryptedPutActionSubCodec implements ActionSubCodec<ByteBuffer, By
           throw new IllegalStateException("More than one element is present");
         }).orElse(-1L);
     byte[] ctoken = cipherManager.getCurrentToken().getBytes(StandardCharsets.UTF_8);
-    // 16 for lsn, idenifier length, ctoken length, 4 for negative number , 1 for version1 of encrypted payload
+    // 16 for lsn, identifier length, ctoken length, 4 for negative number , 1 for version1 of encrypted payload
     int size = identifier.remaining() + ctoken.length + 21;
     ByteBuffer metaData = ByteBuffer.allocate(size);
     metaData.putInt(0xFFFFFFFF);
