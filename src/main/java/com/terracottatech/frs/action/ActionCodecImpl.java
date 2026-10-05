@@ -38,10 +38,9 @@ public final class ActionCodecImpl implements ActionCodec<ByteBuffer, ByteBuffer
   private static final ActionID NULL_ACTION_ID = new ActionID(-1, -1);
 
   private final Map<Class<? extends Action>, ActionID> classToId =
-          new ConcurrentHashMap<>();
+          new ConcurrentHashMap<>(); //write side
   private final Map<ActionID, ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ?>> idToSubCodec =
-          new ConcurrentHashMap<>();
-  private final Map<ActionID, Class<? extends Action>> idToClass = new ConcurrentHashMap<>();
+          new ConcurrentHashMap<>(); //read side
   private final ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager;
 
   public ActionCodecImpl(ObjectManager<ByteBuffer, ByteBuffer, ByteBuffer> objectManager) {
@@ -51,29 +50,33 @@ public final class ActionCodecImpl implements ActionCodec<ByteBuffer, ByteBuffer
 
   private synchronized <T extends Action> void registerAction(ActionID id, Class<T> actionClass, 
                                                               ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? super T> actionSubCodec) {
-    if (classToId.containsKey(actionClass)) {
-      throw new IllegalArgumentException(
-          "Action class " + actionClass + " already registered to id " + classToId.get(
-              actionClass));
-    }
     if (idToSubCodec.containsKey(id)) {
       throw new IllegalArgumentException(
           "Id " + id + " already registered to action SubCodec " + idToSubCodec.get(id));
     }
-    if (idToClass.containsKey(id)) {
-      throw new IllegalArgumentException(
-          "Id " + id + " already registered to action class " + idToClass.get(id));
+    ActionID oldID = classToId.put(actionClass, id);
+    if (oldID != null) {
+      System.out.println("Action class " + actionClass + " previous registered to id " + oldID + " [codec: " + idToSubCodec.get(oldID).getClass().getSimpleName() + "]");
     }
-    classToId.put(actionClass, id);
-    idToClass.put(id, actionClass);
     idToSubCodec.put(id, actionSubCodec);
   }
 
   @Override
   public synchronized <T extends Action> void registerAction(int collectionId, int actionId, 
-                                                             Class<T> actionClass, 
+                                                             ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? super T> actionSubCodec,
+                                                             Class<T> actionClass) {
+    registerAction(collectionId, actionId, actionSubCodec);
+    bindAction(collectionId, actionId, actionClass);
+  }
+
+  @Override
+  public synchronized <T extends Action> void registerAction(int collectionId, int actionId,
                                                              ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? super T> actionSubCodec) {
-    registerAction(new ActionID(collectionId, actionId), actionClass, actionSubCodec);
+  }
+
+  @Override
+  public synchronized <T extends Action> void bindAction(int collectionId, int actionId,
+                                                             Class<T> actionClass) {
   }
 
   @Override

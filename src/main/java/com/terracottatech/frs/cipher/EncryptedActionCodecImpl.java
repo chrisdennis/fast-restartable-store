@@ -42,16 +42,17 @@ public class EncryptedActionCodecImpl implements EncryptedActionCodec<ByteBuffer
     ACTION_HANDLERS.put(TransactionalAction.class, transparent());
     ACTION_HANDLERS.put(TransactionCommitAction.class, transparent());
 
-    ACTION_HANDLERS.put(PutAction.class, (codec, cipherManager, collectionId, actionId, actionClass, actionSubCodec) ->
-            codec.registerAction(collectionId, actionId, PutAction.class, new EncryptedPutActionCodec(cipherManager, (ActionSubCodec) actionSubCodec)));
+    ACTION_HANDLERS.put(PutAction.class, (codec, cipherManager, collectionId, actionId, actionClass) -> {
+      codec.registerAction(99 + collectionId, actionId, PutAction.class, new EncryptedPutActionCodec(cipherManager));
+    });
 
-    ACTION_HANDLERS.put(CompactionAction.class, (codec, cipherManager, collectionId, actionId, actionClass, actionSubCodec) ->
-            codec.registerAction(collectionId, actionId, CompactionAction.class, new EncryptedPutActionCodec(cipherManager, (ActionSubCodec) actionSubCodec)));
+    ACTION_HANDLERS.put(CompactionAction.class, (codec, cipherManager, collectionId, actionId, actionClass) -> {
+      codec.registerAction(99 + collectionId, actionId, CompactionAction.class, new EncryptedPutActionCodec(cipherManager));
+    });
   }
 
   private static <T extends Action> EncryptionHandler<T> transparent() {
-    return (codec, cipherManager, collectionId, actionId, actionClass, actionSubCodec) ->
-            codec.registerAction(collectionId, actionId, actionClass, actionSubCodec);
+    return (codec, cipherManager, collectionId, actionId, actionClass) -> {};
   }
 
   private final CipherManager cipherManager;
@@ -93,11 +94,12 @@ public class EncryptedActionCodecImpl implements EncryptedActionCodec<ByteBuffer
   @Override
   public <T extends Action> void registerAction(int collectionId, int actionId, Class<T> actionClass,
                                                 ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer, ? super T> actionSubCodec) {
+    actionCodec.registerAction(collectionId, actionId, actionClass, actionSubCodec);
     EncryptionHandler<T> encryptionHandler = (EncryptionHandler<T>) ACTION_HANDLERS.get(actionClass);
     if (encryptionHandler == null) {
       throw new IllegalArgumentException("Encryption has not handler for " + actionClass);
     } else {
-      encryptionHandler.handle(actionCodec, cipherManager, collectionId, actionId, actionClass, actionSubCodec);
+      encryptionHandler.handle(actionCodec, cipherManager, collectionId, actionId, actionClass);
     }
   }
 
@@ -114,6 +116,6 @@ public class EncryptedActionCodecImpl implements EncryptedActionCodec<ByteBuffer
   interface EncryptionHandler<T extends Action> {
 
     void handle(ActionCodec<ByteBuffer, ByteBuffer, ByteBuffer> codec, CipherManager cipherManager, int collectionId, int actionId,
-                Class<T> actionClass, ActionSubCodec<ByteBuffer, ByteBuffer, ByteBuffer,  ? super T> actionSubCodec);
+                Class<T> actionClass);
   }
 }
